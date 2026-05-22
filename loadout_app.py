@@ -3,6 +3,24 @@ import streamlit as st
 from collections import defaultdict
 
 # ============================================================
+# DEFAULTS  (edit these to change the app's starting values)
+# ============================================================
+
+DEFAULT_MIN_PERCENT      = 50
+DEFAULT_MAX_LOADOUT_SIZE = 6
+DEFAULT_SOFT_THRESHOLD   = 25
+
+DEFAULT_TYPE_MODIFIERS = {
+    "Busting":  -25,
+}
+
+# Each entry: {"type": <damage type or "— (coating weapon)">, "coating": <coating or "— (type requirement only)">}
+DEFAULT_OWNED_WEAPONS = [
+    {"type": "Chopping",           "coating": "— (type requirement only)"},
+    {"type": "Busting",           "coating": "— (type requirement only)"}
+]
+
+# ============================================================
 # ENEMY DATA
 # ============================================================
 
@@ -308,11 +326,11 @@ st.title("⚔️ Grounded Loadout Calculator")
 with st.sidebar:
     st.header("⚙️ Settings")
 
-    min_percent = st.slider("Min Coverage %", min_value=25, max_value=100, value=50, step=25,
+    min_percent = st.slider("Min Coverage %", min_value=25, max_value=100, value=DEFAULT_MIN_PERCENT, step=25,
                              help="Minimum effective % for a weapon to count as covering an enemy.")
-    max_loadout_size = st.slider("Max Loadout Size", min_value=1, max_value=10, value=6, step=1,
+    max_loadout_size = st.slider("Max Loadout Size", min_value=1, max_value=10, value=DEFAULT_MAX_LOADOUT_SIZE, step=1,
                                   help="Total weapon slots available.")
-    soft_threshold = st.slider("Soft Cover Threshold %", min_value=0, max_value=50, value=25, step=25,
+    soft_threshold = st.slider("Soft Cover Threshold %", min_value=0, max_value=50, value=DEFAULT_SOFT_THRESHOLD, step=25,
                                 help="A weapon can be dropped if all its unique enemies are soft-covered at this % by another weapon.")
 
     st.divider()
@@ -321,8 +339,7 @@ with st.sidebar:
 
     modifier_rows = {}
     for dtype in DAMAGE_TYPES_ALL:
-        default = {"Busting": -25}.get(dtype, 0)
-        modifier_rows[dtype] = st.number_input(dtype, min_value=-100, max_value=100, value=default, step=25, key=f"mod_{dtype}")
+        modifier_rows[dtype] = st.number_input(dtype, min_value=-100, max_value=100, value=DEFAULT_TYPE_MODIFIERS.get(dtype, 0), step=25, key=f"mod_{dtype}")
 
     type_modifiers = {k: v for k, v in modifier_rows.items() if v != 0}
 
@@ -335,11 +352,7 @@ st.caption(
 )
 
 if "required_rows" not in st.session_state:
-    st.session_state.required_rows = [
-        {"type": "Chopping", "coating": "Sour"},
-        {"type": "Chopping", "coating": "— (type requirement only)"},
-        {"type": "— (coating weapon)", "coating": "Fresh"},
-    ]
+    st.session_state.required_rows = [dict(r) for r in DEFAULT_OWNED_WEAPONS]
 
 TYPE_OPTIONS    = ["— (coating weapon)"] + DAMAGE_TYPES_ALL
 COATING_OPTIONS = ["— (type requirement only)"] + COATINGS_ALL
@@ -360,11 +373,14 @@ for i, row in enumerate(st.session_state.required_rows):
             rows_to_delete.append(i)
     st.session_state.required_rows[i] = {"type": t_val, "coating": c_val}
 
-for i in sorted(rows_to_delete, reverse=True):
-    st.session_state.required_rows.pop(i)
+if rows_to_delete:
+    for i in sorted(rows_to_delete, reverse=True):
+        st.session_state.required_rows.pop(i)
+    st.rerun()
 
 if st.button("＋ Add weapon"):
     st.session_state.required_rows.append({"type": DAMAGE_TYPES_ALL[0], "coating": "— (type requirement only)"})
+    st.rerun()
 
 # Parse rows into required_types tuples
 required_types = []
