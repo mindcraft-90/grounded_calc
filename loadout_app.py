@@ -321,7 +321,7 @@ with st.sidebar:
 
     modifier_rows = {}
     for dtype in DAMAGE_TYPES_ALL:
-        default = {"Busting": -25, "Chopping": 25}.get(dtype, 0)
+        default = {"Busting": -25}.get(dtype, 0)
         modifier_rows[dtype] = st.number_input(dtype, min_value=-100, max_value=100, value=default, step=25, key=f"mod_{dtype}")
 
     type_modifiers = {k: v for k, v in modifier_rows.items() if v != 0}
